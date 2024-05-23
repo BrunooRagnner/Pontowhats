@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Registro de Ponto</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.1/dist/js.cookie.min.js"></script>
+<!-- Link para Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+<!-- Link para Material Icons -->
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<style>
+/* styles.css */
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #000;
+    color: #fff;
+    margin: 20px;
+}
+
+h1 {
+    color: #fff;
+}
+
+form {
+    margin-bottom: 20px;
+}
+
+label {
+    font-weight: bold;
+}
+
+input[type="text"] {
+    width: 200px;
+    padding: 5px;
+    margin-bottom: 10px;
+    background-color: #333;
+    color: #fff;
+    border: 1px solid #555;
+}
+
+button {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-family: 'Roboto', sans-serif;
+    margin-bottom: 10px;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+#registros {
+    border-top: 1px solid #ccc;
+    padding-top: 20px;
+}
+
+</style>
+<body>
+<h1>Sistema de Registro de Ponto</h1>
+<form id="registroForm">
+    <label for="nome">Nome:</label>
+    <input type="text" id="nome" name="nome" pattern="[a-zA-ZÀ-ÿ\s]+" title="Digite apenas letras e espaços" required><br><br>
+    <label for="matricula">Matrícula:</label>
+    <input type="text" id="matricula" name="matricula" pattern="[0-9]{5}" title="Digite exatamente 5 números" required><br><br>
+    <button type="button" onclick="registrarPonto('entrada')"><span class="material-icons">login</span> Registrar Entrada</button><br>
+    <button type="button" onclick="registrarPonto('saída')"><span class="material-icons">logout</span> Registrar Saída</button>
+</form>
+<div id="feedback"></div>
+<div id="registros"></div>
+  
+<button onclick="redirecionarParaAdmin()" style="padding: 10px 20px; background-color: #007bff; color: #fff; border: none; cursor: pointer;">
+    <span class="material-icons">admin_panel_settings</span> Acesso Administrativo
+</button>
+<script>
+const TARGET_LATITUDE = -5.199639;
+const TARGET_LONGITUDE = -35.457324;
+const RADIUS_IN_METERS = 100; // Aumentado para 100 metros para facilitar testes
+
+let latitude = null;
+let longitude = null;
+
+// Função para calcular a distância entre duas coordenadas em metros
+function calcularDistancia(lat1, lon1, lat2, lon2) {
+    const R = 6371000; // Raio da Terra em metros
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+        0.5 - Math.cos(dLat)/2 + 
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+        (1 - Math.cos(dLon))/2;
+
+    return R * 2 * Math.asin(Math.sqrt(a));
+}
+
+// Obter localização do usuário
+function obterLocalizacao(callback) {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                latitude = position.coords.latitude;
+                longitude = position.coords.longitude;
+                callback();
+            },
+            (error) => {
+                let mensagemErro;
+                switch (error.code) {
+                    case error.PERMISSION_DENIED:
+                        mensagemErro = "Permissão de localização negada. Por favor, permita o acesso à localização no seu navegador.";
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        mensagemErro = "Informação de localização indisponível.";
+                        break;
+                    case error.TIMEOUT:
+                        mensagemErro = "A requisição de localização expirou.";
+                        break;
+                    case error.UNKNOWN_ERROR:
+                        mensagemErro = "Um erro desconhecido ocorreu.";
+                        break;
+                }
+                mostrarFeedback(mensagemErro, 'error');
+            }
+        );
+    } else {
+        mostrarFeedback('Geolocalização não é suportada pelo seu navegador.', 'error');
+    }
+}
+
+// Função para enviar notificação para o WhatsApp do gestor usando WhatsApp Web
+function enviarNotificacao(nome, tipo, dataHora) {
+    const gestorNumber = '+5584991612793';
+    const mensagem = `Olá, Gestor! ${nome} realizou um registro de ponto de ${tipo} em ${dataHora.toLocaleString()} na localização (Lat: ${latitude}, Long: ${longitude}).`;
+    const whatsappWebUrl = `https://api.whatsapp.com/send?phone=${gestorNumber}&text=${encodeURIComponent(mensagem)}`;
+    window.open(whatsappWebUrl, '_blank');
+}
+
+// Função para registrar ponto
+function registrarPonto(tipo) {
+    // Verificar se os campos estão preenchidos
+    const nome = document.getElementById('nome').value.trim();
+    const matricula = document.getElementById('matricula').value.trim();
+
+    if (!nome || !matricula) {
+        mostrarFeedback('Por favor, preencha todos os campos.', 'error');
+        return; // Impede o registro se algum campo estiver vazio
+    }
+
+    // Continuar com o registro
+    const agora = new Date();
+    const registro = { tipo: tipo, nome: nome, matricula: matricula, dataHora: agora.toLocaleString() };
+
+    // Obter localização e verificar distância
+    obterLocalizacao(() => {
+        if (latitude !== null && longitude !== null) {
+            const distancia = calcularDistancia(latitude, longitude, TARGET_LATITUDE, TARGET_LONGITUDE);
+            if (distancia <= RADIUS_IN_METERS) {
+                armazenarRegistro(registro);
+                enviarNotificacao(nome, tipo, agora);
+                mostrarFeedback('Registro de ponto efetuado com sucesso!', 'success');
+                mostrarRegistros(registro);
+
+                // Redire// Redirecionar para a página de relatório após o registro bem-sucedido
+                window.location.href = "administrativo.html?senha=50@Eletry";
+            } else {
+                mostrarFeedback(`Você está fora da área permitida para registrar o ponto. Distância: ${distancia.toFixed(2)} metros`, 'error');
+            }
+        } else {
+            mostrarFeedback('Localização não disponível. Não é possível enviar a notificação.', 'error');
+        }
+    });
+}
+
+// Função para mostrar feedback visual para o usuário
+function mostrarFeedback(mensagem, tipo) {
+    Swal.fire({
+        title: tipo === 'success' ? 'Sucesso!' : 'Erro!',
+        text: mensagem,
+        icon: tipo,
+        confirmButtonText: 'OK'
+    });
+}
+
+// Função para mostrar os registros de ponto na tela
+function mostrarRegistros(registro) {
+    const registrosDiv = document.getElementById('registros');
+    let registroHtml = `<p>${registro.tipo}: ${registro.nome} (${registro.matricula}) - ${registro.dataHora}</p>`;
+    registrosDiv.insertAdjacentHTML('beforeend', registroHtml);
+}
+
+// Função para armazenar registro (simulação apenas)
+function armazenarRegistro(registro) {
+    console.log('Registro armazenado:', registro);
+}
+
+// Função para mostrar alerta de cookies
+function mostrarAlertaDeCookies() {
+    if (!Cookies.get('cookiesAccepted')) {
+        Swal.fire({
+            title: 'Nós usamos cookies!',
+            text: 'Este site utiliza cookies para melhorar a experiência do usuário.',
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonText: 'Aceitar',
+            cancelButtonText: 'Recusar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Cookies.set('cookiesAccepted', 'true', { expires: 30 });
+                Swal.fire('Obrigado!', 'Você aceitou o uso de cookies.', 'success');
+            } else {
+                Swal.fire('Aviso', 'Você recusou o uso de cookies.', 'warning');
+            }
+        });
+    }
+}
+
+// Mostrar alerta de cookies quando o documento estiver pronto
+document.addEventListener('DOMContentLoaded', mostrarAlertaDeCookies);
+
+// Função para redirecionar para a página administrativa
+function redirecionarParaAdmin() {
+    window.location.href = "admin.html";
+}
+</script>
+</body>
+</html>
