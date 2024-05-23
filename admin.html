@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Página Administrativa - Relatório de Ponto</title>
+<link rel="stylesheet" href="styles.css">
+<!-- Link para Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<style>
+/* styles.css */
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #000;
+    color: #fff;
+    margin: 20px;
+}
+
+h1 {
+    color: #fff;
+}
+
+form {
+    margin-bottom: 20px;
+}
+
+label {
+    font-weight: bold;
+}
+
+input[type="password"] {
+    width: 200px;
+    padding: 5px;
+    margin-bottom: 10px;
+    background-color: #333;
+    color: #fff;
+    border: 1px solid #555;
+}
+
+button {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-family: 'Roboto', sans-serif;
+    margin-bottom: 10px;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+#registros {
+    border-top: 1px solid #ccc;
+    padding-top: 20px;
+    display: none; /* Oculta inicialmente o relatório de ponto */
+}
+
+</style>
+<body>
+<h1>Página Administrativa - Relatório de Ponto</h1>
+<form id="loginForm">
+    <label for="senha">Senha:</label>
+    <input type="password" id="senha" name="senha" required><br><br>
+    <button type="button" onclick="login()">Entrar</button>
+  
+    <button onclick="redirecionarParaIndex()" style="padding: 10px 20px; background-color: #007bff; color: #fff; border: none; cursor: pointer;">
+        <span class="material-icons">arrow_back</span> Voltar para a Página Inicial
+    </button>
+</form>
+<div id="registros">
+    <h2>Relatório de Ponto</h2>
+    <!-- Aqui será exibido o relatório de ponto -->
+    <div id="registrosConteudo"></div>
+    <button onclick="exportarRelatorio()" style="padding: 10px 20px; background-color: #007bff; color: #fff; border: none; cursor: pointer; margin-top: 20px;">
+        <span class="material-icons">cloud_download</span> Baixar Relatório
+    </button>
+    <button onclick="apagarRelatorio()" style="padding: 10px 20px; background-color: #dc3545; color: #fff; border: none; cursor: pointer; margin-top: 20px;">
+        <span class="material-icons">delete</span> Apagar Relatório
+    </button>
+</div>
+<script>
+// Senha para acesso à página administrativa
+const senhagestor = "50@Eletry";
+
+// Função para realizar o login
+function login() {
+    const senha = document.getElementById('senha').value.trim();
+    
+    if (senha === senhaAdministrativa) {
+        mostrarRelatorio();
+    } else {
+        alert("Senha incorreta. Tente novamente.");
+    }
+}
+
+// Função para exibir o relatório de ponto após o login bem-sucedido
+function mostrarRelatorio() {
+    document.getElementById('loginForm').style.display = 'none'; // Oculta o formulário de login
+    document.getElementById('registros').style.display = 'block'; // Exibe o relatório de ponto
+
+    // Abre a conexão com o banco de dados IndexedDB
+    const request = window.indexedDB.open('registrosDB');
+
+    // Manipula o sucesso da abertura do banco de dados
+    request.onsuccess = function(event) {
+        const db = event.target.result;
+        const transaction = db.transaction(['registros'], 'readonly');
+        const objectStore = transaction.objectStore('registros');
+        const request = objectStore.getAll();
+
+        // Manipula o sucesso da obtenção dos registros
+        request.onsuccess = function(event) {
+            const registros = event.target.result;
+            const registrosConteudo = document.getElementById('registrosConteudo');
+
+            if (registros.length > 0) {
+                let html = '<ul>';
+                registros.forEach(function(registro) {
+                    html += `<li>${registro.tipo}: ${registro.nome} (${registro.matricula}) - ${registro.dataHora}</li>`;
+                });
+                html += '</ul>';
+                registrosConteudo.innerHTML = html;
+            } else {
+                registrosConteudo.innerHTML = '<p>Nenhum registro encontrado.</p>';
+            }
+        }
+    }
+}
+
+// Função para redirecionar para a página inicial
+function redirecionarParaIndex() {
+    window.location.href = "index.html";
+}
+
+// Função para exportar o relatório para um arquivo
+function exportarRelatorio() {
+    const conteudo = document.getElementById('registrosConteudo').innerHTML;
+    const blob = new Blob([conteudo], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'relatorio_ponto.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// Função para apagar o relatório
+function apagarRelatorio() {
+    const registrosConteudo = document.getElementById('registrosConteudo');
+    registrosConteudo.innerHTML = '<p>Relatório apagado.</p>';
+}
+</script>
+</body>
+</html>
