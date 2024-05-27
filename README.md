@@ -1,4 +1,4 @@
-# Sistema de Registro de Ponto
+se# Sistema de Registro de Ponto
 
 ## Descrição
 Este é um sistema simples de registro de ponto desenvolvido em HTML, CSS e JavaScript. Permite aos usuários registrar sua entrada e saída, verificando sua localização para garantir que os registros sejam feitos apenas dentro da área permitida. Além disso, envia notificações para o gestor via WhatsApp Web após o registro bem-sucedido.
@@ -22,4 +22,4 @@ Este é um sistema simples de registro de ponto desenvolvido em HTML, CSS e Java
 2. Clique no botão "Registrar Entrada" ou "Registrar Saída" para registrar seu ponto.
 3. Se estiver dentro da área permitida, o registro será aceito e uma notificação será enviada para o gestor via WhatsApp Web.
 
-**Observação:** Este é um projeto básico e simplificado para fins educacionais. É recomendável fazer melhorias adicionais e ajustes de acordo com as necessidades específicas do ambiente de trabalho.
+**Observação:** Este é um projeto básico e simplificado para fins educacionais.
