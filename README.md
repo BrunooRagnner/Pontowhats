@@ -23,3 +23,4 @@ Este é um sistema simples de registro de ponto desenvolvido em HTML, CSS e Java
 3. Se estiver dentro da área permitida, o registro será aceito e uma notificação será enviada para o gestor via WhatsApp Web.
 
 **Observação:** Este é um projeto básico e simplificado para fins educacionais.
+(http://stoque.rf.gd/)
